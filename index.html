@@ -2,95 +2,149 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>별튜브 LIVE — 화면 공유 데모</title>
+<title>별튜브 LIVE</title>
 <style>
 :root{--bg:#0a0d18;--panel:#131a2b;--panel2:#202a42;--line:#2c3752;--txt:#f5f6ff;--muted:#aab4cc;--pink:#ff5b91;--gold:#ffd166;--green:#50d6a0}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}button,input{font:inherit}button{border:0;border-radius:10px;background:var(--pink);color:white;font-weight:750;padding:10px 14px;cursor:pointer}button.secondary{background:var(--panel2);border:1px solid var(--line)}button.gold{background:var(--gold);color:#241a04}button.danger{background:#b93652}button:disabled{opacity:.45;cursor:not-allowed}
-header{height:auto;min-height:64px;display:flex;align-items:center;gap:14px;padding:12px max(16px,calc((100% - 1200px)/2));border-bottom:1px solid var(--line);position:sticky;top:0;background:#0a0d18ee;backdrop-filter:blur(12px);z-index:3;flex-wrap:wrap}.logo{font-size:23px;font-weight:950;white-space:nowrap}.logo span{color:var(--pink)}.spacer{flex:1}.stars{color:var(--gold);font-weight:800}
-main{max-width:1200px;margin:auto;padding:22px 16px 60px}.hero{border:1px solid var(--line);border-radius:18px;padding:22px;background:radial-gradient(circle at 80% 10%,#58355d,transparent 32%),linear-gradient(130deg,#192442,#11172a);display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:20px}.hero h1{font-size:clamp(26px,4vw,40px);line-height:1.15;margin:0 0 10px}.hero p{color:var(--muted);margin:0 0 16px}.hero .emoji{font-size:65px}
-.layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(280px,1fr);gap:16px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px;min-width:0}.panel h2,.panel h3{margin:0 0 12px}.screen{width:100%;aspect-ratio:16/9;background:#05070d;border:1px solid var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}.screen video{width:100%;height:100%;object-fit:contain;background:#05070d}.screen .placeholder{text-align:center;color:var(--muted);padding:20px}.livebadge{position:absolute;left:12px;top:12px;background:#e53e62;border-radius:6px;padding:4px 8px;font-size:12px;font-weight:900;z-index:1}.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.toolbar button{flex:1;min-width:130px}.status{font-size:13px;color:var(--muted);line-height:1.55}.status strong{color:var(--green)}.field{display:grid;gap:6px;margin:12px 0}.field label{font-size:13px;color:var(--muted)}input{background:#0b1120;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px;width:100%}.chat{height:270px;overflow:auto;background:#0b1120;border:1px solid var(--line);border-radius:10px;padding:10px}.line{font-size:13px;line-height:1.45;margin:8px 0;overflow-wrap:anywhere}.line b{color:var(--gold)}.sendrow{display:flex;gap:8px;margin-top:9px}.sendrow input{min-width:0}.sendrow button{white-space:nowrap}.gifts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.gifts button{padding:10px 4px}.notice{background:#302918;border:1px solid #655429;color:#ffe7a7;border-radius:11px;padding:12px;font-size:12px;line-height:1.6;margin:12px 0}.section-title{margin:23px 0 12px;font-size:20px}.streamlist{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}.streamcard{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:14px}.streamcard small{color:var(--muted)}.pill{font-size:11px;background:#233a35;color:#86f0c3;border-radius:6px;padding:4px 7px}.hidden{display:none!important}
-footer{text-align:center;border-top:1px solid var(--line);padding:22px 14px;color:var(--muted);font-size:12px}
-@media(max-width:800px){.layout{grid-template-columns:1fr}.hero .emoji{font-size:44px}.chat{height:190px}}@media(max-width:480px){header{gap:8px}.toolbar button{min-width:100%}.gifts{grid-template-columns:1fr 1fr}.hero{padding:17px}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input{font:inherit}button{border:0;border-radius:10px;background:var(--pink);color:#fff;font-weight:750;padding:10px 14px;cursor:pointer}
+button.secondary{background:var(--panel2);border:1px solid var(--line)}button.gold{background:var(--gold);color:#241a04}button.danger{background:#b93652}button:disabled{opacity:.45;cursor:not-allowed}
+input{background:#0b1120;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px;width:100%}
+header{display:flex;align-items:center;gap:12px;padding:12px max(16px,calc((100% - 1200px)/2));border-bottom:1px solid var(--line);position:sticky;top:0;background:#0a0d18ee;backdrop-filter:blur(12px);z-index:5;flex-wrap:wrap}
+.logo{font-size:23px;font-weight:950}.logo span{color:var(--pink)}.spacer{flex:1}.stars{color:var(--gold);font-weight:800}.cnt{color:var(--muted);font-size:13px}
+main{max-width:1200px;margin:auto;padding:18px 16px 60px}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.slot{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;align-items:center;gap:10px;min-width:0}
+.slot.live{border-color:var(--pink)}.slot .info{flex:1;min-width:0}.slot h3{margin:0 0 4px;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.slot small{color:var(--muted)}
+.pill{font-size:11px;background:#e53e62;border-radius:6px;padding:3px 7px;font-weight:900}
+.layout{display:grid;grid-template-columns:minmax(0,420px) minmax(280px,1fr);gap:16px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px;min-width:0}.panel h2{margin:0 0 12px;font-size:18px}
+.screen{width:100%;max-height:78vh;aspect-ratio:9/16;background:#05070d;border:1px solid var(--line);border-radius:12px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 auto}
+.screen video{width:100%;height:100%;object-fit:contain}.ph{color:var(--muted);text-align:center;padding:20px;position:absolute}
+.toast{position:absolute;left:10px;right:10px;top:14px;background:linear-gradient(90deg,#ff5b91,#ffd166);color:#2a1004;font-weight:900;border-radius:12px;padding:10px 12px;text-align:center;animation:pop .35s;z-index:2}
+@keyframes pop{from{transform:scale(.8);opacity:0}}
+.chat{height:300px;overflow:auto;background:#0b1120;border:1px solid var(--line);border-radius:10px;padding:10px}
+.line{font-size:13px;line-height:1.45;margin:7px 0;overflow-wrap:anywhere}.line b{color:var(--gold)}.line.g{color:var(--gold);font-weight:800}
+.row{display:flex;gap:8px;margin-top:9px}.row input{min-width:0}.gifts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.toolbar button{flex:1;min-width:120px}
+.status{font-size:13px;color:var(--muted);line-height:1.55}.status strong{color:var(--green)}
+.notice{background:#302918;border:1px solid #655429;color:#ffe7a7;border-radius:11px;padding:11px;font-size:12px;line-height:1.6;margin-top:12px}
+.studio{margin-top:16px}.studio .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:800px){.layout{grid-template-columns:1fr}.slots,.studio .cols{grid-template-columns:1fr}.chat{height:200px}}
 </style></head>
 <body>
-<header><div class="logo">✦ 별<span>튜브 LIVE</span></div><div class="spacer"></div><div class="stars">⭐ <span id="starCount">100</span>개</div><button class="secondary" onclick="resetDemoStars()">테스트 별 초기화</button></header>
+<header><div class="logo">✦ 별<span>튜브 LIVE</span></div><div class="spacer"></div>
+<div class="cnt">방송자 <b id="bCnt">0</b>/2 · 시청자 <b id="vCnt">0</b>/30</div>
+<div class="stars">⭐ <span id="starCount">100</span>개</div><button class="secondary" onclick="resetStars()">테스트 별 초기화</button></header>
 <main>
-<section class="hero"><div><h1>라이브 방송에<br>화면 공유를 더하다.</h1><p>카메라·마이크 또는 화면을 선택해 방송을 미리 확인하세요.</p><button onclick="startCamera()">📷 카메라 방송 준비</button> <button class="secondary" onclick="startShare()">🖥️ 화면 공유 준비</button></div><div class="emoji">⭐🎁</div></section>
+<div class="slots" id="slots"></div>
 <div class="layout">
- <section class="panel">
-  <h2>🔴 내 방송 스튜디오</h2>
-  <div class="field"><label for="streamTitle">방송 제목</label><input id="streamTitle" value="오늘의 라이브 방송" maxlength="90"></div>
-  <div class="screen" id="preview"><div class="placeholder"><div style="font-size:48px">🎥</div><p>카메라 또는 화면 공유를 시작하면<br>여기에 미리보기가 표시됩니다.</p></div></div>
-  <div class="toolbar">
-   <button onclick="startCamera()">📷 카메라 + 마이크</button>
-   <button class="secondary" onclick="startShare()">🖥️ 화면 공유</button>
-   <button class="secondary" onclick="stopMedia()">미리보기 끄기</button>
-  </div>
-  <div class="toolbar">
-   <button class="gold" onclick="toggleDemoLive()" id="liveButton">🔴 데모 방송 시작</button>
-   <button class="secondary" onclick="copyTitle()">방송 제목 복사</button>
-  </div>
-  <div id="broadcastStatus" class="status">상태: 방송 준비 전. 카메라/마이크 또는 화면 공유 버튼을 눌러 보세요.</div>
-  <div class="status" style="margin-top:10px">Firebase 상태: <strong id="firebaseStatus">연결 확인 중…</strong></div>
-  <div class="notice">브라우저의 화면 공유 선택창에서 보여줄 화면을 직접 선택하세요. 화면 공유는 사용자가 허용한 경우에만 시작됩니다. 이 프로토타입은 내 기기에서 미리보기와 데모 상태만 보여주며, 다른 시청자에게 실제 영상/음성을 전송하지는 않습니다.</div>
+ <section class="panel"><h2 id="stageTitle">방송 화면</h2>
+  <div class="screen" id="stage"><div class="ph" id="ph">위 목록에서 방송을 선택하거나<br>아래에서 직접 방송을 시작하세요.</div><video id="vid" autoplay playsinline class="hidden" style="display:none"></video></div>
+  <div class="status" id="watchStatus" style="margin-top:10px"></div>
+  <div class="toolbar"><button class="danger" id="leaveBtn" style="display:none" onclick="leaveWatch()">시청 종료</button></div>
  </section>
- <aside class="panel">
-  <h2>💬 라이브 채팅</h2>
-  <div class="chat" id="chat"><div class="line"><b>별튜브</b> 방송 스튜디오에 오신 걸 환영해요!</div><div class="line"><b>별튜브</b> 이 채팅은 현재 브라우저 안에서만 작동하는 데모입니다.</div></div>
-  <div class="sendrow"><input id="chatInput" placeholder="메시지를 입력하세요" maxlength="240" onkeydown="if(event.key==='Enter')sendChat()"><button onclick="sendChat()">전송</button></div>
-  <h3 style="margin-top:20px">🎁 별풍선 후원 테스트</h3>
-  <p class="status">별은 테스트 잔액이며 실제 결제가 아닙니다.</p>
+ <aside class="panel"><h2>💬 라이브 채팅</h2>
+  <div class="status" style="margin-bottom:8px"><input id="nick" placeholder="닉네임" maxlength="12"></div>
+  <div class="chat" id="chat"><div class="line"><b>별튜브</b> 방송을 선택하면 채팅이 열려요.</div></div>
+  <div class="row"><input id="chatInput" placeholder="메시지를 입력하세요" maxlength="200" onkeydown="if(event.key==='Enter')sendChat()"><button onclick="sendChat()">전송</button></div>
   <div class="gifts"><button class="gold" onclick="gift(10)">⭐ 10개</button><button class="gold" onclick="gift(50)">🎁 50개</button><button class="gold" onclick="gift(100)">💝 100개</button></div>
-  <div id="giftStatus" class="status" style="margin-top:10px">아직 후원이 없어요.</div>
+  <div class="status" id="giftStatus" style="margin-top:8px">별풍선은 시청 중일 때 보낼 수 있어요. 테스트 별이며 결제가 아니에요.</div>
  </aside>
 </div>
-<h2 class="section-title">📺 방송 목록 미리보기</h2>
-<div class="streamlist" id="streamlist"><div class="streamcard"><span class="pill">LIVE 데모</span><h3>오늘의 라이브 방송</h3><small>방송 시작 전</small></div></div>
+<section class="panel studio"><h2>🔴 내 방송 스튜디오</h2>
+ <div class="cols"><div><input id="title" value="오늘의 라이브 방송" maxlength="40" aria-label="방송 제목">
+  <div class="toolbar"><button onclick="prep('cam')">📷 카메라 + 마이크</button><button class="secondary" onclick="prep('screen')">🖥️ 화면 공유</button></div>
+  <div class="toolbar"><button class="gold" id="liveBtn" onclick="toggleLive()">🔴 방송 시작</button></div>
+  <div class="status" id="liveStatus">먼저 카메라나 화면을 준비하세요.</div></div>
+ <div class="notice">방송자는 최대 2명, 시청자는 최대 30명이에요. 영상은 방송자 브라우저에서 시청자에게 바로 전송돼요(WebRTC). 방송 중에는 이 탭을 닫지 마세요. 시청자가 많을수록 방송자 인터넷 업로드 속도가 많이 필요해요.</div></div>
+</section>
 </main>
-<footer>별튜브 LIVE 프로토타입 · 테스트 별만 제공 · 실제 라이브 송출/결제/정산 미연결</footer>
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
-import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
-const firebaseConfig = {
-  apiKey: "AIzaSyDSAnrBRFTbFs0tIU8JKgCKVeJli-Gn0b0",
-  authDomain: "dortuf.firebaseapp.com",
-  databaseURL: "https://dortuf-default-rtdb.firebaseio.com",
-  projectId: "dortuf",
-  storageBucket: "dortuf.firebasestorage.app",
-  messagingSenderId: "645145941096",
-  appId: "1:645145941096:web:04876e472478adffd497dd",
-  measurementId: "G-6D1932W158"
-};
-try {
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  get(ref(db, "connectionTest")).then(snapshot => {
-    const el = document.getElementById("firebaseStatus");
-    if (el) el.textContent = snapshot.exists() ? "연결 성공 · 테스트 데이터 확인" : "서버 응답 성공 · 테스트 데이터 없음";
-  }).catch(error => {
-    const el = document.getElementById("firebaseStatus");
-    if (el) el.textContent = (error?.code === "PERMISSION_DENIED" || /permission/i.test(error?.message || "")) ? "접근 거부 · Firebase 보안 규칙/인증 확인 필요" : "연결 오류 · " + (error?.message || "확인 필요");
-  });
-} catch (error) {
-  const el = document.getElementById("firebaseStatus");
-  if (el) el.textContent = "Firebase 초기화 오류 · " + (error?.message || "확인 필요");
-}
-</script>
-<script>
-let mediaStream=null,mediaKind='',demoLive=false,stars=100,received=0,donated=0;
-const $=id=>document.getElementById(id);
-function status(s){$('broadcastStatus').innerHTML='상태: '+s}
-function addChat(name,msg){let d=document.createElement('div');d.className='line';let b=document.createElement('b');b.textContent=name;d.appendChild(b);d.appendChild(document.createTextNode(' '+msg));$('chat').appendChild(d);$('chat').scrollTop=$('chat').scrollHeight}
-async function startCamera(){try{stopMedia(false);mediaStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});mediaKind='camera';showPreview();status('<strong>카메라·마이크 준비 완료</strong> — 내 기기에서 미리보기 중.');}catch(e){status('카메라/마이크를 시작하지 못했어요. 브라우저 권한과 HTTPS 또는 localhost를 확인해 주세요.');}}
-async function startShare(){try{stopMedia(false);mediaStream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});mediaKind='share';showPreview();status('<strong>화면 공유 준비 완료</strong> — 선택한 화면을 내 기기에서 미리보기 중.');mediaStream.getVideoTracks()[0].addEventListener('ended',()=>{stopMedia();});}catch(e){status('화면 공유가 취소되었거나 시작할 수 없어요. 브라우저에서 화면 공유를 허용해 주세요.');}}
-function showPreview(){let p=$('preview');p.innerHTML='<span class="livebadge">미리보기</span><video id="previewVideo" autoplay muted playsinline></video>';let v=$('previewVideo');v.srcObject=mediaStream;}
-function stopMedia(update=true){if(mediaStream){mediaStream.getTracks().forEach(t=>t.stop());mediaStream=null;}mediaKind='';if($('preview'))$('preview').innerHTML='<div class="placeholder"><div style="font-size:48px">🎥</div><p>카메라 또는 화면 공유를 시작하면<br>여기에 미리보기가 표시됩니다.</p></div>';if(update)status('미리보기가 꺼졌어요.');}
-function toggleDemoLive(){demoLive=!demoLive;$('liveButton').textContent=demoLive?'⏹ 데모 방송 종료':'🔴 데모 방송 시작';if(demoLive){status('<strong>데모 방송 중</strong> — 이 상태는 이 기기에서만 보입니다. 실제 송출은 연결되지 않았어요.');$('streamlist').innerHTML=`<div class="streamcard"><span class="pill">LIVE 데모</span><h3>${escapeHtml($('streamTitle').value||'제목 없는 방송')}</h3><small>시청자 1명(테스트 표시) · ${mediaKind==='share'?'화면 공유 미리보기':mediaKind==='camera'?'카메라 미리보기':'영상 입력 없음'}</small></div>`;addChat('별튜브','데모 방송이 시작되었어요!')}else{status('데모 방송을 종료했어요.');$('streamlist').innerHTML='<div class="streamcard"><small>현재 방송이 종료되었습니다.</small></div>';addChat('별튜브','데모 방송이 종료되었어요.');}}
-function sendChat(){let i=$('chatInput'),m=i.value.trim();if(!m)return;addChat('나',m);i.value=''}
-function gift(n){if(stars<n){$('giftStatus').textContent='별이 부족해요. 테스트 별을 초기화해 주세요.';return}stars-=n;donated+=n;$('starCount').textContent=stars;$('giftStatus').textContent=`⭐ ${n}개를 보냈어요! (데모) · 누적 후원 ${donated}개`;addChat('별튜브 알림',`시청자가 별풍선 ${n}개를 보냈습니다!`)}
-function resetDemoStars(){stars=100;$('starCount').textContent=stars;$('giftStatus').textContent='테스트 별 잔액을 100개로 초기화했어요.'}
-function copyTitle(){let t=$('streamTitle').value||'';if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(t).then(()=>status('방송 제목을 복사했어요.')).catch(()=>status('제목: '+escapeHtml(t)));else status('방송 제목: '+escapeHtml(t))}
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-window.addEventListener('beforeunload',()=>{if(mediaStream)mediaStream.getTracks().forEach(t=>t.stop())});
+import {initializeApp} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+import {getDatabase,ref,set,push,remove,onValue,onChildAdded,onDisconnect,runTransaction,query,limitToLast} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
+const db=getDatabase(initializeApp({apiKey:"AIzaSyDSAnrBRFTbFs0tIU8JKgCKVeJli-Gn0b0",authDomain:"dortuf.firebaseapp.com",databaseURL:"https://dortuf-default-rtdb.firebaseio.com",projectId:"dortuf",storageBucket:"dortuf.firebasestorage.app",messagingSenderId:"645145941096",appId:"1:645145941096:web:04876e472478adffd497dd"}));
+const $=id=>document.getElementById(id),ICE={iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"}]};
+const me=Math.random().toString(36).slice(2,10);
+let stars=100;try{stars=+localStorage.getItem('stars')||100}catch(e){}
+let stream=null,mySlot=null,peers={},slotsData={},watchSlot=null,viewPc=null,viewSlot=null,unsubChat=null,unsubEnd=null,room=null,joinedAt=0;
+$('starCount').textContent=stars;
+try{$('nick').value=localStorage.getItem('nick')||''}catch(e){}
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const name=()=>{const n=$('nick').value.trim()||'손님'+me.slice(0,3);try{localStorage.setItem('nick',$('nick').value)}catch(e){}return n};
+function ice(pc){return new Promise(r=>{if(pc.iceGatheringState==='complete')return r();const t=setTimeout(r,4000);pc.addEventListener('icegatheringstatechange',()=>{if(pc.iceGatheringState==='complete'){clearTimeout(t);r()}})})}
+const sd=d=>({type:d.type,sdp:d.sdp});
+
+// 방송 목록 / 인원
+onValue(ref(db,'slots'),s=>{slotsData=s.val()||{};$('bCnt').textContent=Object.keys(slotsData).length;
+ $('slots').innerHTML=['1','2'].map(k=>{const d=slotsData[k];return d?`<div class="slot live"><span class="pill">LIVE</span><div class="info"><h3>${esc(d.title)}</h3><small>${esc(d.name)} 님의 방송</small></div>${d.id===me?'<small>내 방송</small>':`<button onclick="watch('${k}')">시청</button>`}</div>`:`<div class="slot"><div class="info"><h3>방송 자리 ${k}</h3><small>비어 있어요</small></div></div>`}).join('')},
+ e=>$('watchStatus').textContent='Firebase 접근 거부: 보안 규칙을 확인하세요 ('+e.code+')');
+onValue(ref(db,'viewers'),s=>$('vCnt').textContent=s.size);
+
+// 채팅 + 별풍선
+function joinRoom(k){leaveRoom();room=k;joinedAt=Date.now()-2000;$('chat').innerHTML='';
+ unsubChat=onChildAdded(query(ref(db,'chat/'+k),limitToLast(40)),s=>{const m=s.val();const d=document.createElement('div');
+  if(m.gift){d.className='line g';d.textContent=`⭐ ${m.name}님이 별풍선 ${m.gift}개를 보냈습니다!`;if(m.ts>joinedAt)toast(`${m.name}님이 별풍선 ${m.gift}개를 보냈습니다!`)}
+  else{d.className='line';const b=document.createElement('b');b.textContent=m.name;d.append(b,' '+m.msg)}
+  $('chat').appendChild(d);$('chat').scrollTop=1e9})}
+function leaveRoom(){if(unsubChat)unsubChat();unsubChat=null;room=null}
+function toast(t){const e=document.createElement('div');e.className='toast';e.textContent=t;$('stage').appendChild(e);setTimeout(()=>e.remove(),3500)}
+window.sendChat=()=>{const i=$('chatInput'),m=i.value.trim();if(!m||!room)return;push(ref(db,'chat/'+room),{name:name(),msg:m,ts:Date.now()});i.value=''};
+window.gift=n=>{if(!viewSlot)return $('giftStatus').textContent='먼저 방송을 시청해 주세요.';
+ if(stars<n)return $('giftStatus').textContent='별이 부족해요. 테스트 별을 초기화해 주세요.';
+ stars-=n;try{localStorage.setItem('stars',stars)}catch(e){}$('starCount').textContent=stars;
+ push(ref(db,'chat/'+room),{name:name(),gift:n,ts:Date.now()});$('giftStatus').textContent=`⭐ ${n}개를 보냈어요!`};
+window.resetStars=()=>{stars=100;try{localStorage.setItem('stars',100)}catch(e){}$('starCount').textContent=100};
+
+function showVideo(s){const v=$('vid');v.srcObject=s;v.style.display=s?'block':'none';$('ph').style.display=s?'none':'block';
+ if(s)v.play().catch(()=>{v.muted=true;v.play()})}
+
+// ===== 방송자 =====
+window.prep=async k=>{try{if(mySlot)return;stopStream();
+ stream=await(k==='cam'?navigator.mediaDevices.getUserMedia({video:{width:{ideal:540},height:{ideal:960},aspectRatio:9/16,facingMode:'user'},audio:true}):navigator.mediaDevices.getDisplayMedia({video:true,audio:true}));
+ stream.getVideoTracks()[0].onended=()=>{if(mySlot)endLive();else stopStream()};
+ const v=$('vid');v.muted=true;showVideo(stream);$('stageTitle').textContent='내 방송 미리보기';$('liveStatus').innerHTML='<strong>준비 완료</strong> — 방송 시작을 누르세요.'}
+ catch(e){$('liveStatus').textContent='시작하지 못했어요. 권한과 HTTPS 연결을 확인하세요.'}};
+function stopStream(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;if(!watchSlot)showVideo(null)}
+window.toggleLive=()=>mySlot?endLive():goLive();
+async function goLive(){if(!stream)return $('liveStatus').textContent='먼저 카메라나 화면을 준비하세요.';
+ if(viewSlot)leaveWatch();
+ let got=null;for(const k of['1','2']){try{const r=await runTransaction(ref(db,'slots/'+k),c=>c?undefined:{id:me,title:$('title').value.trim()||'라이브 방송',name:name(),ts:Date.now()});if(r.committed){got=k;break}}catch(e){return $('liveStatus').textContent='Firebase 접근 거부: 보안 규칙을 확인하세요.'}}
+ if(!got)return $('liveStatus').textContent='방송자 2명이 이미 방송 중이에요. 잠시 후 다시 시도하세요.';
+ mySlot=got;onDisconnect(ref(db,'slots/'+got)).remove();onDisconnect(ref(db,'signal/'+got)).remove();
+ await remove(ref(db,'signal/'+got));await remove(ref(db,'chat/'+got));
+ onChildAdded(ref(db,'signal/'+got),s=>answer(got,s.key,s.val()));
+ joinRoom(got);$('liveBtn').textContent='⏹ 방송 종료';$('liveStatus').innerHTML='<strong>방송 중</strong> — 자리 '+got}
+async function answer(k,vid,v){if(!v||!v.offer||k!==mySlot||peers[vid])return;
+ const pc=new RTCPeerConnection(ICE);peers[vid]=pc;
+ pc.onconnectionstatechange=()=>{if(['failed','closed','disconnected'].includes(pc.connectionState)){pc.close();delete peers[vid];remove(ref(db,`signal/${k}/${vid}`))}};
+ await pc.setRemoteDescription(v.offer);stream.getTracks().forEach(t=>pc.addTrack(t,stream));
+ await pc.setLocalDescription(await pc.createAnswer());
+ try{pc.getSenders().forEach(s=>{if(s.track&&s.track.kind==='video'){const p=s.getParameters();if(!p.encodings||!p.encodings.length)p.encodings=[{}];p.encodings[0].maxBitrate=700000;s.setParameters(p)}})}catch(e){}
+ await ice(pc);await set(ref(db,`signal/${k}/${vid}/answer`),sd(pc.localDescription))}
+async function endLive(){const k=mySlot;mySlot=null;Object.values(peers).forEach(p=>p.close());peers={};
+ if(k){await remove(ref(db,'slots/'+k));await remove(ref(db,'signal/'+k))}
+ leaveRoom();stopStream();$('liveBtn').textContent='🔴 방송 시작';$('liveStatus').textContent='방송이 종료되었어요.';$('stageTitle').textContent='방송 화면'}
+
+// ===== 시청자 =====
+window.watch=async k=>{if(mySlot)return $('watchStatus').textContent='방송 중에는 다른 방송을 볼 수 없어요.';
+ leaveWatch();let vs=null;
+ for(let i=0;i<30;i++){try{const r=await runTransaction(ref(db,'viewers/'+i),c=>c?undefined:{id:me});if(r.committed){vs=i;break}}catch(e){return $('watchStatus').textContent='Firebase 접근 거부: 보안 규칙을 확인하세요.'}}
+ if(vs===null)return $('watchStatus').textContent='시청자 30명이 가득 찼어요. 잠시 후 다시 시도하세요.';
+ viewSlot=k;watchSlot=vs;onDisconnect(ref(db,'viewers/'+vs)).remove();
+ $('stageTitle').textContent=(slotsData[k]?.title||'방송')+' 시청 중';$('leaveBtn').style.display='';$('watchStatus').textContent='연결 중…';
+ joinRoom(k);
+ const pc=new RTCPeerConnection(ICE);viewPc=pc;
+ pc.addTransceiver('video',{direction:'recvonly'});pc.addTransceiver('audio',{direction:'recvonly'});
+ pc.ontrack=e=>{const v=$('vid');v.muted=false;showVideo(e.streams[0]);$('watchStatus').innerHTML='<strong>시청 중</strong>'};
+ pc.onconnectionstatechange=()=>{if(pc.connectionState==='failed')$('watchStatus').textContent='연결 실패: 네트워크가 직접 연결을 막고 있을 수 있어요.'};
+ await pc.setLocalDescription(await pc.createOffer());await ice(pc);
+ const sr=ref(db,`signal/${k}/${me}`);onDisconnect(sr).remove();await set(sr,{offer:sd(pc.localDescription)});
+ let done=false;const un=onValue(ref(db,`signal/${k}/${me}/answer`),s=>{if(s.exists()&&!done&&viewPc===pc){done=true;pc.setRemoteDescription(s.val())}});
+ const un2=onValue(ref(db,'slots/'+k),s=>{if(!s.exists()&&viewPc===pc){leaveWatch();$('watchStatus').textContent='방송이 종료되었어요.'}});
+ unsubEnd=()=>{un();un2()}};
+window.leaveWatch=()=>{if(unsubEnd)unsubEnd();unsubEnd=null;if(viewPc)viewPc.close();viewPc=null;
+ if(viewSlot)remove(ref(db,`signal/${viewSlot}/${me}`));if(watchSlot!==null)remove(ref(db,'viewers/'+watchSlot));
+ viewSlot=null;watchSlot=null;if(!mySlot){leaveRoom();showVideo(null);$('stageTitle').textContent='방송 화면';$('watchStatus').textContent=''}$('leaveBtn').style.display='none'};
+addEventListener('beforeunload',()=>{if(mySlot)remove(ref(db,'slots/'+mySlot));if(watchSlot!==null)remove(ref(db,'viewers/'+watchSlot))});
 </script>
 </body></html>
