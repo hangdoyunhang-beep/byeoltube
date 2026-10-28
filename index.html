@@ -33,13 +33,13 @@ main{max-width:1200px;margin:auto;padding:18px 16px 60px}
 </style></head>
 <body>
 <header><div class="logo">✦ 별<span>튜브 LIVE</span></div><div class="spacer"></div>
-<div class="cnt">방송자 <b id="bCnt">0</b>/2 · 시청자 <b id="vCnt">0</b>/30</div>
+<div class="cnt">방송자 <b id="bCnt">0</b>/2 · 시청자 <b id="vCnt">0</b>/30 <span style="opacity:.5">· v6</span></div>
 <div class="stars">⭐ <span id="starCount">100</span>개</div><button class="secondary" onclick="resetStars()">테스트 별 초기화</button></header>
 <main>
 <div class="slots" id="slots"></div>
 <div class="layout">
  <section class="panel"><h2 id="stageTitle">방송 화면</h2>
-  <div class="screen" id="stage"><div class="ph" id="ph">위 목록에서 방송을 선택하거나<br>아래에서 직접 방송을 시작하세요.</div><video id="vid" autoplay playsinline class="hidden" style="display:none"></video><img id="fimg" alt="" style="display:none;width:100%;height:100%;object-fit:contain"></div>
+  <div class="screen" id="stage"><div class="ph" id="ph">위 목록에서 방송을 선택하거나<br>아래에서 직접 방송을 시작하세요.</div><video id="vid" autoplay playsinline class="hidden" style="display:none"></video><img id="fimg" alt="" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#05070d;z-index:1"></div>
   <div class="status" id="watchStatus" style="margin-top:10px"></div>
   <div class="toolbar"><button class="danger" id="leaveBtn" style="display:none" onclick="leaveWatch()">시청 종료</button></div>
  </section>
@@ -61,104 +61,168 @@ main{max-width:1200px;margin:auto;padding:18px 16px 60px}
 </main>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
-import {getDatabase,ref,set,push,remove,onValue,onChildAdded,onDisconnect,runTransaction,query,limitToLast} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
+import {getDatabase,ref,set,push,remove,onValue,onChildAdded,onChildRemoved,onDisconnect,runTransaction,query,limitToLast} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 const db=getDatabase(initializeApp({apiKey:"AIzaSyDSAnrBRFTbFs0tIU8JKgCKVeJli-Gn0b0",authDomain:"dortuf.firebaseapp.com",databaseURL:"https://dortuf-default-rtdb.firebaseio.com",projectId:"dortuf",storageBucket:"dortuf.firebasestorage.app",messagingSenderId:"645145941096",appId:"1:645145941096:web:04876e472478adffd497dd"}));
-const $=id=>document.getElementById(id),ICE={iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"},{urls:["turn:openrelay.metered.ca:80","turn:openrelay.metered.ca:443","turns:openrelay.metered.ca:443?transport=tcp"],username:"openrelayproject",credential:"openrelayproject"}]};
+const $=id=>document.getElementById(id);
+const ICE={iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"},{urls:["turn:openrelay.metered.ca:80","turn:openrelay.metered.ca:443","turns:openrelay.metered.ca:443?transport=tcp"],username:"openrelayproject",credential:"openrelayproject"}]};
 // ▼ 내 전용 중계 서버를 쓸 때만 아래 두 칸을 채우세요 (Metered 가입 후 앱 이름과 API 키)
 const METERED_APP="",METERED_KEY="";
 let ICE_CFG=null;
 async function iceCfg(){if(ICE_CFG)return ICE_CFG;ICE_CFG=ICE;if(METERED_APP&&METERED_KEY){try{const r=await fetch(`https://${METERED_APP}.metered.live/api/v1/turn/credentials?apiKey=${METERED_KEY}`);const l=await r.json();if(Array.isArray(l)&&l.length)ICE_CFG={iceServers:l}}catch(e){}}return ICE_CFG}
+
 const me=Math.random().toString(36).slice(2,10);
-let stars=100;try{stars=+localStorage.getItem('stars')||100}catch(e){}
-let stream=null,mySlot=null,peers={},slotsData={},watchSlot=null,viewPc=null,viewSlot=null,unsubChat=null,unsubEnd=null,room=null,joinedAt=0;
+let stars=100;try{const sv=localStorage.getItem('stars');if(sv!==null&&!isNaN(+sv))stars=+sv}catch(e){}
+let stream=null,mySlot=null,peers={},slotsData={},busy=false;
+let viewSlot=null,viewId=null,viewPc=null,watchSlot=null,sess=0,unsubEnd=null;
+let room=null,unsubChat=null,bUn=[],bOd=[],vOd=[];
 $('starCount').textContent=stars;
 try{$('nick').value=localStorage.getItem('nick')||''}catch(e){}
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const name=()=>{const n=$('nick').value.trim()||'손님'+me.slice(0,3);try{localStorage.setItem('nick',$('nick').value)}catch(e){}return n};
-function ice(pc){return new Promise(r=>{if(pc.iceGatheringState==='complete')return r();const t=setTimeout(r,4000);pc.addEventListener('icegatheringstatechange',()=>{if(pc.iceGatheringState==='complete'){clearTimeout(t);r()}})})}
+const name=()=>{const n=$('nick').value.trim().slice(0,12)||'손님'+me.slice(0,3);try{localStorage.setItem('nick',$('nick').value)}catch(e){}return n};
+const cnt=s=>s.exists()?Object.keys(s.val()).length:0;
 const sd=d=>({type:d.type,sdp:d.sdp});
-// ===== 영상이 직접 연결되지 않을 때: Firebase로 화면 사진을 중계하는 저화질 모드 =====
-let fw=null,fv=null,fcv=document.createElement('canvas'),fbUn=null,fbStop=null,fbTimer=null;
-function cap(){if(!fv||!fv.videoWidth||!mySlot)return;const s=480/Math.max(fv.videoWidth,fv.videoHeight);fcv.width=Math.round(fv.videoWidth*s);fcv.height=Math.round(fv.videoHeight*s);fcv.getContext('2d').drawImage(fv,0,0,fcv.width,fcv.height);set(ref(db,'frame/'+mySlot),{d:fcv.toDataURL('image/jpeg',.5),t:Date.now()})}
-function frames(on){if(on&&!fw&&stream){fv=document.createElement('video');fv.muted=true;fv.srcObject=stream;fv.play().catch(()=>{});fw=new Worker(URL.createObjectURL(new Blob(['setInterval(()=>postMessage(0),350)'])));fw.onmessage=cap}else if(!on&&fw){fw.terminate();fw=null;fv=null}}
-function startFallback(k){if(fbStop)return;const fr=ref(db,`fallback/${k}/${me}`);onDisconnect(fr).remove();set(fr,true);const img=$('fimg');
- const un=onValue(ref(db,'frame/'+k),s=>{if(s.exists()){img.src=s.val().d;img.style.display='block';$('ph').style.display='none'}});
- $('watchStatus').textContent='저화질 중계 모드로 보는 중 (소리 없음)';fbStop=()=>{un();remove(fr);img.style.display='none'}}
+const denied='Firebase 접근 거부: 보안 규칙을 확인하세요.';
+function ice(pc){return new Promise(r=>{if(pc.iceGatheringState==='complete')return r();const t=setTimeout(r,4000);pc.addEventListener('icegatheringstatechange',()=>{if(pc.iceGatheringState==='complete'){clearTimeout(t);r()}})})}
+// 접속이 끊길 때 자동으로 지울 데이터 등록/취소 (남이 쓰는 자리를 지우지 않도록 꼭 취소해야 함)
+function od(arr,path){const r=ref(db,path);onDisconnect(r).remove();arr.push(r);return r}
+function cancelOd(arr){arr.forEach(r=>{try{onDisconnect(r).cancel()}catch(e){}});arr.length=0}
+
+// ===== 직접 연결이 안 될 때: Firebase로 화면 사진을 중계하는 저화질 모드 =====
+let fw=null,fwt=null,fwI=0,fv=null,fbN=0,fcv=document.createElement('canvas'),sending=false,fbStop=null,fbTimer=null;
+function cap(){if(sending||!fv||!fv.videoWidth||!mySlot)return;const s=420/Math.max(fv.videoWidth,fv.videoHeight);fcv.width=Math.max(2,Math.round(fv.videoWidth*s));fcv.height=Math.max(2,Math.round(fv.videoHeight*s));
+ try{fcv.getContext('2d').drawImage(fv,0,0,fcv.width,fcv.height);let d=fcv.toDataURL('image/webp',.5);if(d.indexOf('data:image/webp')!==0)d=fcv.toDataURL('image/jpeg',.45);
+  sending=true;set(ref(db,'frame/'+mySlot),{d,t:Date.now()}).catch(()=>{$('liveStatus').textContent=denied+' (frame 쓰기 규칙 확인)'}).finally(()=>{sending=false})}catch(e){sending=false}}
+function framesOff(){if(fw){fw.terminate();fw=null}if(fwt){clearInterval(fwt);fwt=null}fwI=0}
+function frames(on,n){const iv=n<=2?300:n<=5?500:800;
+ if(on&&stream){if((fw||fwt)&&fwI===iv)return;framesOff();fwI=iv;
+  if(!fv){fv=document.createElement('video');fv.muted=true;fv.playsInline=true;fv.style.cssText='position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none';fv.srcObject=stream;document.body.appendChild(fv);fv.play().catch(()=>{})}
+  try{fw=new Worker(URL.createObjectURL(new Blob([`setInterval(()=>postMessage(0),${iv})`])));fw.onmessage=cap}catch(e){fw=null;fwt=setInterval(cap,iv+200)}}
+ else if(!on){framesOff();if(fv){fv.remove();fv=null}}}
+function startFallback(k){if(fbStop||viewSlot!==k)return;const fr=od(vOd,`fallback/${k}/${viewId}`);set(fr,true).catch(()=>{$('watchStatus').textContent=denied+' (fallback 규칙 확인)'});const img=$('fimg');
+ const un=onValue(ref(db,'frame/'+k),s=>{if(s.exists()&&s.val().d){img.src=s.val().d;img.style.display='block';$('watchStatus').textContent='저화질 중계 모드로 보는 중 (소리 없음)'}},()=>{$('watchStatus').textContent=denied+' (frame 규칙 확인)'});
+ $('watchStatus').textContent='저화질 중계 연결 중… 방송자 화면을 기다리는 중';
+ fbStop=()=>{un();remove(fr).catch(()=>{});img.style.display='none'}}
 function stopFallback(){clearTimeout(fbTimer);if(fbStop){fbStop();fbStop=null}}
 
-// 방송 목록 / 인원
+// ===== 방송 목록 / 인원 =====
 onValue(ref(db,'slots'),s=>{slotsData=s.val()||{};$('bCnt').textContent=Object.keys(slotsData).length;
  $('slots').innerHTML=['1','2'].map(k=>{const d=slotsData[k];return d?`<div class="slot live"><span class="pill">LIVE</span><div class="info"><h3>${esc(d.title)}</h3><small>${esc(d.name)} 님의 방송</small></div>${d.id===me?'<small>내 방송</small>':`<button onclick="watch('${k}')">시청</button>`}</div>`:`<div class="slot"><div class="info"><h3>방송 자리 ${k}</h3><small>비어 있어요</small></div></div>`}).join('')},
  e=>$('watchStatus').textContent='Firebase 접근 거부: 보안 규칙을 확인하세요 ('+e.code+')');
-onValue(ref(db,'viewers'),s=>$('vCnt').textContent=s.size);
+onValue(ref(db,'viewers'),s=>$('vCnt').textContent=cnt(s));
 
-// 채팅 + 별풍선
-function joinRoom(k){leaveRoom();room=k;joinedAt=Date.now()-2000;$('chat').innerHTML='';
- unsubChat=onChildAdded(query(ref(db,'chat/'+k),limitToLast(40)),s=>{const m=s.val();const d=document.createElement('div');
-  if(m.gift){d.className='line g';d.textContent=`⭐ ${m.name}님이 별풍선 ${m.gift}개를 보냈습니다!`;if(m.ts>joinedAt)toast(`${m.name}님이 별풍선 ${m.gift}개를 보냈습니다!`)}
-  else{d.className='line';const b=document.createElement('b');b.textContent=m.name;d.append(b,' '+m.msg)}
-  $('chat').appendChild(d);$('chat').scrollTop=1e9})}
+// ===== 채팅 + 별풍선 =====
+function joinRoom(k){leaveRoom();room=k;$('chat').innerHTML='';let ready=false;const q=query(ref(db,'chat/'+k),limitToLast(40));
+ const u1=onChildAdded(q,s=>{const m=s.val()||{};const nm=String(m.name||'손님');const d=document.createElement('div');
+  if(m.gift){d.className='line g';d.textContent=`⭐ ${nm}님이 별풍선 ${m.gift}개를 보냈습니다!`;if(ready)toast(`${nm}님이 별풍선 ${m.gift}개를 보냈습니다!`)}
+  else{d.className='line';const b=document.createElement('b');b.textContent=nm;d.append(b,' '+String(m.msg||''))}
+  $('chat').appendChild(d);$('chat').scrollTop=1e9});
+ const u2=onValue(q,()=>{ready=true},{onlyOnce:true});
+ unsubChat=()=>{u1();u2()}}
 function leaveRoom(){if(unsubChat)unsubChat();unsubChat=null;room=null}
 function toast(t){const e=document.createElement('div');e.className='toast';e.textContent=t;$('stage').appendChild(e);setTimeout(()=>e.remove(),3500)}
-window.sendChat=()=>{const i=$('chatInput'),m=i.value.trim();if(!m||!room)return;push(ref(db,'chat/'+room),{name:name(),msg:m,ts:Date.now()});i.value=''};
-window.gift=n=>{if(!viewSlot)return $('giftStatus').textContent='먼저 방송을 시청해 주세요.';
+window.sendChat=()=>{const i=$('chatInput'),m=i.value.trim();if(!m||!room)return;push(ref(db,'chat/'+room),{name:name(),msg:m,ts:Date.now()}).catch(()=>{});i.value=''};
+window.gift=n=>{if(viewSlot===null||!room)return $('giftStatus').textContent='먼저 방송을 시청해 주세요.';
  if(stars<n)return $('giftStatus').textContent='별이 부족해요. 테스트 별을 초기화해 주세요.';
  stars-=n;try{localStorage.setItem('stars',stars)}catch(e){}$('starCount').textContent=stars;
- push(ref(db,'chat/'+room),{name:name(),gift:n,ts:Date.now()});$('giftStatus').textContent=`⭐ ${n}개를 보냈어요!`};
+ push(ref(db,'chat/'+room),{name:name(),gift:n,ts:Date.now()}).catch(()=>{});$('giftStatus').textContent=`⭐ ${n}개를 보냈어요!`};
 window.resetStars=()=>{stars=100;try{localStorage.setItem('stars',100)}catch(e){}$('starCount').textContent=100};
 
 function showVideo(s){const v=$('vid');v.srcObject=s;v.style.display=s?'block':'none';$('ph').style.display=s?'none':'block';
- if(s)v.play().catch(()=>{v.muted=true;v.play()})}
+ if(s)v.play().catch(()=>{v.muted=true;v.play().catch(()=>{})})}
 
 // ===== 방송자 =====
-window.prep=async k=>{try{if(mySlot)return;stopStream();
- stream=await(k==='cam'?navigator.mediaDevices.getUserMedia({video:{width:{ideal:540},height:{ideal:960},aspectRatio:9/16,facingMode:'user'},audio:true}):navigator.mediaDevices.getDisplayMedia({video:true,audio:true}));
- stream.getVideoTracks()[0].onended=()=>{if(mySlot)endLive();else stopStream()};
- const v=$('vid');v.muted=true;showVideo(stream);$('stageTitle').textContent='내 방송 미리보기';$('liveStatus').innerHTML='<strong>준비 완료</strong> — 방송 시작을 누르세요.'}
- catch(e){$('liveStatus').textContent='시작하지 못했어요. 권한과 HTTPS 연결을 확인하세요.'}};
-function stopStream(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;if(!watchSlot)showVideo(null)}
+const errMsg=e=>{const n=e&&e.name;return n==='NotAllowedError'?'권한이 거부됐어요. 주소창 왼쪽 자물쇠에서 카메라/마이크를 허용해 주세요.':n==='NotFoundError'?'카메라나 마이크를 찾지 못했어요. 연결을 확인하세요.':n==='NotReadableError'?'다른 프로그램이 카메라를 쓰고 있어요. 그 프로그램을 끄고 다시 눌러 주세요.':n==='AbortError'?'취소되었어요.':(!navigator.mediaDevices?'이 주소는 HTTPS가 아니라서 카메라를 쓸 수 없어요.':'시작하지 못했어요. 권한과 HTTPS 연결을 확인하세요.')};
+window.prep=async k=>{if(mySlot||busy)return;
+ try{if(viewPc||viewSlot!==null)leaveWatch();stopStream();
+  const md=navigator.mediaDevices;if(!md)throw{};
+  const s=await(k==='cam'?md.getUserMedia({video:{width:{ideal:540},height:{ideal:960},aspectRatio:9/16,facingMode:'user'},audio:true}):md.getDisplayMedia({video:true,audio:true}));
+  stream=s;
+  s.getVideoTracks()[0].onended=()=>{if(stream!==s)return;if(mySlot)endLive();else{stopStream();$('liveStatus').textContent='화면 공유가 끝났어요. 다시 준비해 주세요.'}};
+  const v=$('vid');v.muted=true;showVideo(s);$('stageTitle').textContent='내 방송 미리보기';$('liveStatus').innerHTML='<strong>준비 완료</strong> — 방송 시작을 누르세요.'}
+ catch(e){$('liveStatus').textContent=errMsg(e)}};
+function stopStream(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;if(watchSlot===null)showVideo(null)}
 window.toggleLive=()=>mySlot?endLive():goLive();
-async function goLive(){if(!stream)return $('liveStatus').textContent='먼저 카메라나 화면을 준비하세요.';
- if(viewSlot)leaveWatch();
- let got=null;for(const k of['1','2']){try{const r=await runTransaction(ref(db,'slots/'+k),c=>c?undefined:{id:me,title:$('title').value.trim()||'라이브 방송',name:name(),ts:Date.now()});if(r.committed){got=k;break}}catch(e){return $('liveStatus').textContent='Firebase 접근 거부: 보안 규칙을 확인하세요.'}}
- if(!got)return $('liveStatus').textContent='방송자 2명이 이미 방송 중이에요. 잠시 후 다시 시도하세요.';
- mySlot=got;onDisconnect(ref(db,'slots/'+got)).remove();onDisconnect(ref(db,'signal/'+got)).remove();
- await remove(ref(db,'signal/'+got));await remove(ref(db,'chat/'+got));
- onChildAdded(ref(db,'signal/'+got),s=>answer(got,s.key,s.val()));
- remove(ref(db,'fallback/'+got));onDisconnect(ref(db,'frame/'+got)).remove();onDisconnect(ref(db,'fallback/'+got)).remove();fbUn=onValue(ref(db,'fallback/'+got),s=>frames(s.size>0));
- joinRoom(got);$('liveBtn').textContent='⏹ 방송 종료';$('liveStatus').innerHTML='<strong>방송 중</strong> — 자리 '+got}
-async function answer(k,vid,v){if(!v||!v.offer||k!==mySlot||peers[vid])return;
- const pc=new RTCPeerConnection(await iceCfg());peers[vid]=pc;
- pc.onconnectionstatechange=()=>{if(['failed','closed'].includes(pc.connectionState)){pc.close();delete peers[vid];remove(ref(db,`signal/${k}/${vid}`))}if(mySlot)$('liveStatus').innerHTML='<strong>방송 중</strong> — 영상이 연결된 시청자 '+Object.values(peers).filter(p=>p.connectionState==='connected').length+'명'};
- await pc.setRemoteDescription(v.offer);stream.getTracks().forEach(t=>pc.addTrack(t,stream));
- await pc.setLocalDescription(await pc.createAnswer());
- try{pc.getSenders().forEach(s=>{if(s.track&&s.track.kind==='video'){const p=s.getParameters();if(!p.encodings||!p.encodings.length)p.encodings=[{}];p.encodings[0].maxBitrate=700000;s.setParameters(p)}})}catch(e){}
- await ice(pc);await set(ref(db,`signal/${k}/${vid}/answer`),sd(pc.localDescription))}
-async function endLive(){const k=mySlot;mySlot=null;frames(false);if(fbUn){fbUn();fbUn=null}Object.values(peers).forEach(p=>p.close());peers={};
- if(k){await remove(ref(db,'slots/'+k));await remove(ref(db,'signal/'+k));remove(ref(db,'frame/'+k));remove(ref(db,'fallback/'+k))}
- leaveRoom();stopStream();$('liveBtn').textContent='🔴 방송 시작';$('liveStatus').textContent='방송이 종료되었어요.';$('stageTitle').textContent='방송 화면'}
+function upd(){if(mySlot)$('liveStatus').innerHTML='<strong>방송 중</strong> — 영상이 연결된 시청자 '+Object.values(peers).filter(p=>p.connectionState==='connected').length+'명'+(fbN?' · 저화질 중계 '+fbN+'명':'')}
+async function goLive(){if(busy||mySlot)return;if(!stream)return $('liveStatus').textContent='먼저 카메라나 화면을 준비하세요.';
+ busy=true;
+ try{if(viewPc||viewSlot!==null)leaveWatch();
+  let got=null;
+  for(const k of['1','2']){try{const r=await runTransaction(ref(db,'slots/'+k),c=>c?undefined:{id:me,title:$('title').value.trim().slice(0,40)||'라이브 방송',name:name(),ts:Date.now()});if(r.committed){got=k;break}}catch(e){return $('liveStatus').textContent=denied}}
+  if(!got)return $('liveStatus').textContent='방송자 2명이 이미 방송 중이에요. 잠시 후 다시 시도하세요.';
+  if(!stream){remove(ref(db,'slots/'+got));return $('liveStatus').textContent='화면이 끊겼어요. 다시 준비해 주세요.'}
+  mySlot=got;
+  ['slots','signal','frame','fallback'].forEach(p=>od(bOd,p+'/'+got));
+  bUn.push(onChildAdded(ref(db,'signal/'+got),s=>answer(got,s.key,s.val())));
+  bUn.push(onChildRemoved(ref(db,'signal/'+got),s=>{const p=peers[s.key];if(p){p.close();delete peers[s.key];upd()}}));
+  remove(ref(db,'fallback/'+got)).catch(()=>{});remove(ref(db,'frame/'+got)).catch(()=>{});
+  bUn.push(onValue(ref(db,'fallback/'+got),s=>{fbN=cnt(s);frames(fbN>0,fbN);upd()}));
+  await remove(ref(db,'chat/'+got)).catch(()=>{});
+  joinRoom(got);$('liveBtn').textContent='⏹ 방송 종료';upd()}
+ catch(e){$('liveStatus').textContent='방송을 시작하지 못했어요. 잠시 후 다시 시도하세요.'}
+ finally{busy=false}}
+async function answer(k,vid,v){if(!v||!v.offer||k!==mySlot||peers[vid]||!stream)return;let pc=null;
+ try{pc=new RTCPeerConnection(await iceCfg());
+  if(k!==mySlot||peers[vid]||!stream){pc.close();return}
+  peers[vid]=pc;
+  pc.onconnectionstatechange=()=>{if(['failed','closed'].includes(pc.connectionState)){pc.close();if(peers[vid]===pc){delete peers[vid];remove(ref(db,`signal/${k}/${vid}`)).catch(()=>{})}}upd()};
+  await pc.setRemoteDescription(v.offer);
+  if(peers[vid]!==pc||!stream)return;
+  stream.getTracks().forEach(t=>pc.addTrack(t,stream));
+  await pc.setLocalDescription(await pc.createAnswer());
+  try{pc.getSenders().forEach(x=>{if(x.track&&x.track.kind==='video'){const p=x.getParameters();if(!p.encodings||!p.encodings.length)p.encodings=[{}];p.encodings[0].maxBitrate=700000;x.setParameters(p).catch(()=>{})}})}catch(e){}
+  await ice(pc);
+  if(peers[vid]!==pc)return;
+  await set(ref(db,`signal/${k}/${vid}/answer`),sd(pc.localDescription))}
+ catch(e){if(pc){pc.close();if(peers[vid]===pc)delete peers[vid]}}}
+async function endLive(){const k=mySlot;if(!k)return;mySlot=null;
+ fbN=0;frames(false);bUn.forEach(f=>{try{f()}catch(e){}});bUn=[];
+ Object.values(peers).forEach(p=>p.close());peers={};
+ leaveRoom();stopStream();$('liveBtn').textContent='🔴 방송 시작';$('liveStatus').textContent='방송이 종료되었어요.';$('stageTitle').textContent='방송 화면';
+ try{await remove(ref(db,'slots/'+k));await remove(ref(db,'signal/'+k));remove(ref(db,'frame/'+k));remove(ref(db,'fallback/'+k))}catch(e){}
+ cancelOd(bOd)}
 
 // ===== 시청자 =====
-window.watch=async k=>{if(mySlot)return $('watchStatus').textContent='방송 중에는 다른 방송을 볼 수 없어요.';
- leaveWatch();let vs=null;
- for(let i=0;i<30;i++){try{const r=await runTransaction(ref(db,'viewers/'+i),c=>c?undefined:{id:me});if(r.committed){vs=i;break}}catch(e){return $('watchStatus').textContent='Firebase 접근 거부: 보안 규칙을 확인하세요.'}}
- if(vs===null)return $('watchStatus').textContent='시청자 30명이 가득 찼어요. 잠시 후 다시 시도하세요.';
- viewSlot=k;watchSlot=vs;onDisconnect(ref(db,'viewers/'+vs)).remove();
- $('stageTitle').textContent=(slotsData[k]?.title||'방송')+' 시청 중';$('leaveBtn').style.display='';$('watchStatus').textContent='연결 중…';
- joinRoom(k);
- const pc=new RTCPeerConnection(await iceCfg());viewPc=pc;
- pc.addTransceiver('video',{direction:'recvonly'});pc.addTransceiver('audio',{direction:'recvonly'});
- pc.ontrack=e=>{stopFallback();const v=$('vid');v.muted=false;showVideo(e.streams[0]);$('watchStatus').innerHTML='<strong>시청 중</strong>'};
- pc.onconnectionstatechange=()=>{const c=pc.connectionState;if(c==='failed')$('watchStatus').textContent='영상 연결 실패: 네트워크가 연결을 막고 있어요. 다른 와이파이나 데이터로 시도해 보세요.';else if(c==='connecting')$('watchStatus').textContent='영상 연결 중…';else if(c==='connected')$('watchStatus').innerHTML='<strong>영상 연결됨</strong>'};
- await pc.setLocalDescription(await pc.createOffer());await ice(pc);
- const sr=ref(db,`signal/${k}/${me}`);onDisconnect(sr).remove();await set(sr,{offer:sd(pc.localDescription)});
- fbTimer=setTimeout(()=>{if(viewPc===pc&&pc.connectionState!=='connected')startFallback(k)},9000);
- let done=false;setTimeout(()=>{if(!done&&viewPc===pc)$('watchStatus').textContent='방송자 응답이 없어요. 방송자의 별튜브 탭이 열려 있는지 확인하세요.'},15000);const un=onValue(ref(db,`signal/${k}/${me}/answer`),s=>{if(s.exists()&&!done&&viewPc===pc){done=true;pc.setRemoteDescription(s.val())}});
- const un2=onValue(ref(db,'slots/'+k),s=>{if(!s.exists()&&viewPc===pc){leaveWatch();$('watchStatus').textContent='방송이 종료되었어요.'}});
- unsubEnd=()=>{un();un2()}};
-window.leaveWatch=()=>{stopFallback();if(unsubEnd)unsubEnd();unsubEnd=null;if(viewPc)viewPc.close();viewPc=null;
- if(viewSlot)remove(ref(db,`signal/${viewSlot}/${me}`));if(watchSlot!==null)remove(ref(db,'viewers/'+watchSlot));
- viewSlot=null;watchSlot=null;if(!mySlot){leaveRoom();showVideo(null);$('stageTitle').textContent='방송 화면';$('watchStatus').textContent=''}$('leaveBtn').style.display='none'};
+window.watch=async k=>{if(busy)return;if(mySlot)return $('watchStatus').textContent='방송 중에는 다른 방송을 볼 수 없어요.';
+ busy=true;
+ try{leaveWatch();const my=sess;let vs=null;
+  for(let i=0;i<30;i++){try{const r=await runTransaction(ref(db,'viewers/'+i),c=>c?undefined:{id:me});if(r.committed){vs=i;break}}catch(e){return $('watchStatus').textContent=denied}}
+  if(vs===null)return $('watchStatus').textContent='시청자 30명이 가득 찼어요. 잠시 후 다시 시도하세요.';
+  if(my!==sess){remove(ref(db,'viewers/'+vs));return}
+  watchSlot=vs;viewSlot=k;viewId=me+Math.random().toString(36).slice(2,6);od(vOd,'viewers/'+vs);
+  $('stageTitle').textContent=(slotsData[k]&&slotsData[k].title||'방송')+' 시청 중';$('leaveBtn').style.display='';$('watchStatus').textContent='연결 중…';
+  joinRoom(k);
+  const cfg=await iceCfg();if(my!==sess)return;
+  const pc=new RTCPeerConnection(cfg);viewPc=pc;
+  pc.addTransceiver('video',{direction:'recvonly'});pc.addTransceiver('audio',{direction:'recvonly'});
+  const remote=new MediaStream();let shown=false;
+  pc.ontrack=e=>{if(my!==sess)return;remote.addTrack(e.track);if(!shown){shown=true;$('vid').muted=false;showVideo(remote)}};
+  pc.onconnectionstatechange=()=>{if(my!==sess)return;const c=pc.connectionState;
+   if(c==='connected'){stopFallback();$('watchStatus').innerHTML='<strong>시청 중</strong>'}
+   else if(c==='failed'){startFallback(k)}
+   else if(!fbStop&&c==='connecting')$('watchStatus').textContent='영상 연결 중…'
+   else if(c==='disconnected'){if(!fbStop)$('watchStatus').textContent='연결이 불안정해요…';clearTimeout(fbTimer);fbTimer=setTimeout(()=>{if(my===sess&&pc.connectionState!=='connected')startFallback(k)},5000)}};
+  await pc.setLocalDescription(await pc.createOffer());await ice(pc);
+  if(my!==sess)return;
+  const sr=od(vOd,`signal/${k}/${viewId}`);
+  await set(sr,{offer:sd(pc.localDescription)});
+  if(my!==sess){remove(sr).catch(()=>{});return}
+  startFallback(k);
+  fbTimer=setTimeout(()=>{if(my===sess&&pc.connectionState!=='connected')startFallback(k)},6000);
+  let done=false;
+  setTimeout(()=>{if(!done&&my===sess)$('watchStatus').textContent='방송자 응답이 없어요. 방송자의 별튜브 탭이 열려 있는지 확인하세요.'},15000);
+  const un=onValue(ref(db,`signal/${k}/${viewId}/answer`),s=>{if(s.exists()&&!done&&my===sess){done=true;pc.setRemoteDescription(s.val()).catch(()=>startFallback(k))}});
+  const un2=onValue(ref(db,'slots/'+k),s=>{if(!s.exists()&&my===sess){leaveWatch();$('watchStatus').textContent='방송이 종료되었어요.'}});
+  unsubEnd=()=>{un();un2()}}
+ catch(e){leaveWatch();$('watchStatus').textContent='연결 중 오류가 났어요. 다시 시청을 눌러 주세요.'}
+ finally{busy=false}};
+function leaveWatch(){sess++;stopFallback();if(unsubEnd){unsubEnd();unsubEnd=null}
+ if(viewPc){viewPc.close();viewPc=null}
+ if(viewSlot!==null&&viewId)remove(ref(db,`signal/${viewSlot}/${viewId}`)).catch(()=>{});
+ if(watchSlot!==null)remove(ref(db,'viewers/'+watchSlot)).catch(()=>{});
+ cancelOd(vOd);viewSlot=null;viewId=null;watchSlot=null;
+ if(!mySlot){leaveRoom();showVideo(null);$('stageTitle').textContent='방송 화면';$('watchStatus').textContent=''}
+ $('leaveBtn').style.display='none'}
+window.leaveWatch=leaveWatch;
 addEventListener('beforeunload',()=>{if(mySlot)remove(ref(db,'slots/'+mySlot));if(watchSlot!==null)remove(ref(db,'viewers/'+watchSlot))});
 </script>
 </body></html>
